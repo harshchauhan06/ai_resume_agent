@@ -1,145 +1,116 @@
-import React, { useEffect, useState } from 'react';
-import { Bot, CheckCircle2, XCircle, RefreshCw, Sparkles, Terminal } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Terminal, RefreshCw, Sparkles, CheckCircle2, ArrowLeft } from 'lucide-react';
+import RoleSelection from './components/RoleSelection';
 
 function App() {
+  const [step, setStep] = useState('setup'); // 'setup' | 'interview' | 'results'
+  const [interviewConfig, setInterviewConfig] = useState(null);
   const [health, setHealth] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const checkHealth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/health');
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
-      setHealth(data);
-    } catch (err) {
-      console.error('Health check failed:', err);
-      setError(err.message || 'Failed to connect to backend server');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    checkHealth();
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => setHealth(data))
+      .catch(err => console.error('Health error:', err));
   }, []);
 
+  const handleStartInterview = (config) => {
+    setInterviewConfig(config);
+    setStep('interview');
+  };
+
+  const handleReset = () => {
+    setStep('setup');
+    setInterviewConfig(null);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-6 md:p-12 relative overflow-hidden">
-      {/* Background subtle glow circles */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 md:p-10 relative overflow-hidden">
+      {/* Background radial glow */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute top-1/2 -right-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div className="max-w-4xl mx-auto w-full space-y-8 z-10">
-        {/* Header */}
-        <header className="flex items-center justify-between border-b border-slate-800/80 pb-6">
+      <div className="max-w-5xl mx-auto w-full space-y-8 z-10">
+        {/* Navigation / Header */}
+        <header className="flex items-center justify-between border-b border-slate-800/80 pb-5">
           <div className="flex items-center space-x-3">
+            {step !== 'setup' && (
+              <button
+                onClick={handleReset}
+                className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition border border-slate-800 mr-1"
+                title="Back to Setup"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
             <div className="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/20">
-              <Bot className="w-7 h-7 text-white" />
+              <Bot className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+              <h1 className="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 AI Interview Agent
               </h1>
-              <p className="text-xs text-slate-400 font-medium">MVP Engine v1.0</p>
+              <p className="text-xs text-slate-400">Step 2: Role & Interview Setup</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" /> Step 1 Active
-            </span>
+          <div className="flex items-center space-x-3 text-xs font-semibold">
+            {health && (
+              <span className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full border ${
+                health.hasApiKey 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${health.hasApiKey ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                {health.hasApiKey ? 'AI Backend Online' : 'Missing API Key'}
+              </span>
+            )}
           </div>
         </header>
 
-        {/* Status Card */}
-        <main className="space-y-6">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 md:p-8 backdrop-blur-sm shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2 text-slate-200">
-                <Terminal className="w-5 h-5 text-indigo-400" />
-                Backend Connection Status
-              </h2>
-              <button
-                onClick={checkHealth}
-                disabled={loading}
-                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5 text-xs font-medium border border-slate-700 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
+        {/* View Switcher */}
+        <main className="py-2">
+          {step === 'setup' && (
+            <RoleSelection onStartInterview={handleStartInterview} />
+          )}
 
-            {loading && (
-              <div className="p-6 text-center text-slate-400 flex items-center justify-center gap-3">
-                <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                Checking connectivity to backend API...
-              </div>
-            )}
-
-            {!loading && error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 flex items-start gap-3">
-                <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+          {step === 'interview' && interviewConfig && (
+            <div className="p-8 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div>
-                  <h3 className="font-semibold text-sm">Backend Disconnected</h3>
-                  <p className="text-xs text-red-300/80 mt-0.5">{error}</p>
+                  <span className="text-xs text-blue-400 uppercase font-semibold tracking-wider">
+                    {interviewConfig.difficulty} • {interviewConfig.questionCount} Questions
+                  </span>
+                  <h2 className="text-2xl font-bold text-white mt-0.5">
+                    {interviewConfig.role.title} Interview
+                  </h2>
+                </div>
+                <button
+                  onClick={handleReset}
+                  className="text-xs text-slate-400 hover:text-white underline"
+                >
+                  Change Setup
+                </button>
+              </div>
+
+              <div className="p-6 bg-slate-950 rounded-xl border border-slate-800/80 text-center space-y-3">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+                <h3 className="text-lg font-bold text-white">Role Configured Successfully!</h3>
+                <p className="text-sm text-slate-400 max-w-md mx-auto">
+                  You selected <strong className="text-slate-200">{interviewConfig.role.title}</strong> at <strong className="text-slate-200">{interviewConfig.difficulty}</strong> level with <strong className="text-slate-200">{interviewConfig.questionCount} questions</strong>.
+                </p>
+                <div className="pt-2 text-xs text-indigo-400 font-mono">
+                  [Step 3 will load questions dynamically for this configuration]
                 </div>
               </div>
-            )}
-
-            {!loading && health && (
-              <div className="space-y-4">
-                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-sm">{health.message}</h3>
-                    <p className="text-xs text-emerald-400/80 font-mono mt-0.5">
-                      Timestamp: {health.timestamp}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl">
-                    <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">
-                      Express Server
-                    </p>
-                    <p className="text-sm font-semibold text-slate-200 mt-1 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                      Running on http://localhost:5000
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl">
-                    <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">
-                      Gemini AI Key Status
-                    </p>
-                    <p className="text-sm font-semibold text-slate-200 mt-1 flex items-center gap-2">
-                      {health.hasApiKey ? (
-                        <>
-                          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                          API Key Configured in backend/.env
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                          <span className="text-amber-300">Key pending in backend/.env</span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </main>
       </div>
 
       {/* Footer */}
-      <footer className="max-w-4xl mx-auto w-full text-center text-xs text-slate-500 pt-8 border-t border-slate-800/40">
-        AI Interview Agent • Step 1: Initialization & Environment Setup Complete
+      <footer className="max-w-5xl mx-auto w-full text-center text-xs text-slate-500 pt-8 border-t border-slate-800/40">
+        AI Interview Agent • Step 2: Role & Interview Setup Active
       </footer>
     </div>
   );
