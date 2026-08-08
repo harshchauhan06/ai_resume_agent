@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, RefreshCw, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Bot, ArrowLeft, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import RoleSelection from './components/RoleSelection';
 import QuestionCard from './components/QuestionCard';
 
@@ -9,6 +9,7 @@ function App() {
   const [questions, setQuestions] = useState([]);
   const [questionSource, setQuestionSource] = useState('fallback-bank');
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState({}); // { [qId]: 'user text' }
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [health, setHealth] = useState(null);
@@ -26,6 +27,7 @@ function App() {
     setErrorMsg(null);
     setStep('interview');
     setCurrentIndex(0);
+    setAnswers({});
 
     try {
       const res = await fetch('/api/questions', {
@@ -52,11 +54,29 @@ function App() {
     }
   };
 
+  const handleSaveAnswer = (questionId, text) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: text
+    }));
+  };
+
+  const handleSubmitAllAnswers = () => {
+    console.log('Submitting answers for evaluation:', {
+      config: interviewConfig,
+      questions,
+      answers
+    });
+    // In Step 5, we will call /api/evaluate endpoint!
+    alert(`Step 4 Complete! Successfully recorded ${Object.keys(answers).length} answers. Proceeding to Step 5 (AI Evaluation Engine).`);
+  };
+
   const handleReset = () => {
     setStep('setup');
     setInterviewConfig(null);
     setQuestions([]);
     setCurrentIndex(0);
+    setAnswers({});
     setErrorMsg(null);
   };
 
@@ -86,7 +106,7 @@ function App() {
               <h1 className="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 AI Interview Agent
               </h1>
-              <p className="text-xs text-slate-400">Step 3: Question Engine & Slider UI</p>
+              <p className="text-xs text-slate-400">Step 4: Real-Time Answer Recording</p>
             </div>
           </div>
 
@@ -140,11 +160,14 @@ function App() {
                 <QuestionCard
                   questions={questions}
                   currentIndex={currentIndex}
-                  onNext={() => setCurrentIndex(prev => Math.min(prev + 1, questions.length - 1))}
-                  onPrev={() => setCurrentIndex(prev => Math.max(prev - 1, 0))}
+                  onNext={(newIndex) => setCurrentIndex(prev => typeof newIndex === 'number' ? newIndex : Math.min(prev + 1, questions.length - 1))}
+                  onPrev={(newIndex) => setCurrentIndex(prev => typeof newIndex === 'number' ? newIndex : Math.max(prev - 1, 0))}
                   roleTitle={interviewConfig?.role?.title}
                   difficulty={interviewConfig?.difficulty}
                   source={questionSource}
+                  answers={answers}
+                  onSaveAnswer={handleSaveAnswer}
+                  onSubmitAll={handleSubmitAllAnswers}
                 />
               )}
             </>
@@ -154,7 +177,7 @@ function App() {
 
       {/* Footer */}
       <footer className="max-w-5xl mx-auto w-full text-center text-xs text-slate-500 pt-8 border-t border-slate-800/40">
-        AI Interview Agent • Step 3: Role-Based Question Engine Active
+        AI Interview Agent • Step 4: Answer Form & Session Tracking Active
       </footer>
     </div>
   );

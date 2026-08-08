@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { 
-  HelpCircle, 
   ChevronLeft, 
   ChevronRight, 
   Lightbulb, 
   Sparkles, 
   Layers,
-  Award
+  Award,
+  CheckCircle2,
+  PenTool,
+  Send,
+  MessageSquareText
 } from 'lucide-react';
 
 export default function QuestionCard({
@@ -16,11 +19,17 @@ export default function QuestionCard({
   onPrev,
   roleTitle,
   difficulty,
-  source
+  source,
+  answers,
+  onSaveAnswer,
+  onSubmitAll
 }) {
   const [showHint, setShowHint] = useState(false);
   const currentQ = questions[currentIndex];
   const totalQuestions = questions.length;
+  const currentAnswer = answers[currentQ?.id] || '';
+
+  const answeredCount = Object.values(answers).filter(a => a && a.trim().length > 0).length;
   const progressPercent = Math.round(((currentIndex + 1) / totalQuestions) * 100);
 
   if (!currentQ) return null;
@@ -39,37 +48,66 @@ export default function QuestionCard({
             </span>
             {source === 'gemini-ai' ? (
               <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Gemini AI Generated
+                <Sparkles className="w-3 h-3" /> Gemini AI
               </span>
             ) : (
               <span className="px-2.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 text-slate-400">
-                Curated Question Bank
+                Curated Bank
               </span>
             )}
           </div>
 
-          <div className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-amber-400" />
-            Question <span className="text-white text-sm">{currentIndex + 1}</span> of {totalQuestions}
+          <div className="flex items-center space-x-3 text-xs">
+            <span className="text-slate-400 flex items-center gap-1.5 font-medium">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              Answered: <strong className="text-white">{answeredCount}</strong> / {totalQuestions}
+            </span>
           </div>
         </div>
 
+        {/* Question Switcher Pills */}
+        <div className="flex items-center space-x-2 pt-1 overflow-x-auto pb-1">
+          {questions.map((q, idx) => {
+            const hasAnswer = answers[q.id] && answers[q.id].trim().length > 0;
+            const isCurrent = idx === currentIndex;
+            return (
+              <button
+                key={q.id || idx}
+                onClick={() => {
+                  setShowHint(false);
+                  if (idx > currentIndex) onNext(idx);
+                  else if (idx < currentIndex) onPrev(idx);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                  isCurrent
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-400/50'
+                    : hasAnswer
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+                    : 'bg-slate-950 text-slate-400 border border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                Q{idx + 1} {hasAnswer && <CheckCircle2 className="w-3 h-3" />}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Visual Progress Bar */}
-        <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+        <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
           <div
-            className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300 ease-out"
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-300 ease-out"
             style={{ width: `${progressPercent}%` }}
           ></div>
         </div>
       </div>
 
-      {/* Main Question Body */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl space-y-6 relative overflow-hidden">
-        {/* Subtle accent tag */}
+      {/* Main Question & Answer Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl space-y-6">
+        {/* Category & Hint Toggle Header */}
         <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
           <div className="flex items-center space-x-2 text-xs text-indigo-400 font-semibold uppercase tracking-wider">
             <Layers className="w-4 h-4" />
-            <span>Category: {currentQ.category || 'Technical Assessment'}</span>
+            <span>Category: {currentQ.category || 'Technical Scenario'}</span>
           </div>
 
           {currentQ.hint && (
@@ -78,12 +116,12 @@ export default function QuestionCard({
               className="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 transition"
             >
               <Lightbulb className="w-3.5 h-3.5" />
-              {showHint ? 'Hide Hint' : 'Show Tip / Focus'}
+              {showHint ? 'Hide Tip' : 'Show Tip'}
             </button>
           )}
         </div>
 
-        {/* Hint Accordion */}
+        {/* Hint Box */}
         {showHint && currentQ.hint && (
           <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-200 text-xs space-y-1 animate-fade-in">
             <p className="font-semibold flex items-center gap-1.5">
@@ -94,13 +132,40 @@ export default function QuestionCard({
         )}
 
         {/* Question Text */}
-        <div className="space-y-2 py-2">
+        <div className="space-y-2">
+          <span className="text-xs text-slate-400 font-mono uppercase font-semibold">
+            Question #{currentIndex + 1}
+          </span>
           <h3 className="text-xl md:text-2xl font-bold text-white leading-relaxed">
             {currentQ.text}
           </h3>
         </div>
 
-        {/* Navigation Footer */}
+        {/* User Answer Textarea */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <label htmlFor="answer-input" className="font-semibold flex items-center gap-1.5 text-slate-200">
+              <PenTool className="w-3.5 h-3.5 text-blue-400" />
+              Your Interview Answer:
+            </label>
+            <span className={currentAnswer.length >= 30 ? 'text-emerald-400 font-mono' : 'text-slate-400 font-mono'}>
+              {currentAnswer.length} characters (min 30 recommended)
+            </span>
+          </div>
+
+          <div className="relative">
+            <textarea
+              id="answer-input"
+              rows={5}
+              value={currentAnswer}
+              onChange={(e) => onSaveAnswer(currentQ.id, e.target.value)}
+              placeholder="Type your structured answer here... (Tip: Structure using Situation, Action, Result, or core technical concepts)"
+              className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl p-4 text-sm text-slate-100 placeholder-slate-500 resize-y transition font-sans leading-relaxed"
+            />
+          </div>
+        </div>
+
+        {/* Navigation & Submit Controls */}
         <div className="flex items-center justify-between pt-6 border-t border-slate-800/80">
           <button
             onClick={() => {
@@ -114,21 +179,27 @@ export default function QuestionCard({
             Previous
           </button>
 
-          <span className="text-xs text-slate-500 font-mono">
-            {currentIndex + 1} / {totalQuestions}
-          </span>
-
-          <button
-            onClick={() => {
-              setShowHint(false);
-              onNext();
-            }}
-            disabled={currentIndex === totalQuestions - 1}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs md:text-sm font-semibold transition flex items-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-40"
-          >
-            Next Question
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          {currentIndex < totalQuestions - 1 ? (
+            <button
+              onClick={() => {
+                setShowHint(false);
+                onNext();
+              }}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs md:text-sm font-semibold transition flex items-center gap-2 shadow-lg shadow-blue-600/20"
+            >
+              Next Question
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={onSubmitAll}
+              disabled={answeredCount === 0}
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 text-white text-xs md:text-sm font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-600/20"
+            >
+              <Send className="w-4 h-4" />
+              Submit All Answers for AI Evaluation
+            </button>
+          )}
         </div>
       </div>
     </div>
