@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Terminal, RefreshCw, Sparkles, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Bot, RefreshCw, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import RoleSelection from './components/RoleSelection';
+import QuestionCard from './components/QuestionCard';
 
 function App() {
   const [step, setStep] = useState('setup'); // 'setup' | 'interview' | 'results'
   const [interviewConfig, setInterviewConfig] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [questionSource, setQuestionSource] = useState('fallback-bank');
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [health, setHealth] = useState(null);
 
   useEffect(() => {
@@ -14,14 +20,44 @@ function App() {
       .catch(err => console.error('Health error:', err));
   }, []);
 
-  const handleStartInterview = (config) => {
+  const handleStartInterview = async (config) => {
     setInterviewConfig(config);
+    setLoadingQuestions(true);
+    setErrorMsg(null);
     setStep('interview');
+    setCurrentIndex(0);
+
+    try {
+      const res = await fetch('/api/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roleId: config.role.id,
+          roleTitle: config.role.title,
+          difficulty: config.difficulty,
+          count: config.questionCount
+        })
+      });
+
+      if (!res.ok) throw new Error(`Server returned status ${res.status}`);
+      const data = await res.json();
+
+      setQuestions(data.questions || []);
+      setQuestionSource(data.source || 'fallback-bank');
+    } catch (err) {
+      console.error('Failed to load questions:', err);
+      setErrorMsg('Failed to load questions from server. Please check backend.');
+    } finally {
+      setLoadingQuestions(false);
+    }
   };
 
   const handleReset = () => {
     setStep('setup');
     setInterviewConfig(null);
+    setQuestions([]);
+    setCurrentIndex(0);
+    setErrorMsg(null);
   };
 
   return (
@@ -50,7 +86,7 @@ function App() {
               <h1 className="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 AI Interview Agent
               </h1>
-              <p className="text-xs text-slate-400">Step 2: Role & Interview Setup</p>
+              <p className="text-xs text-slate-400">Step 3: Question Engine & Slider UI</p>
             </div>
           </div>
 
@@ -62,7 +98,7 @@ function App() {
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
               }`}>
                 <span className={`w-2 h-2 rounded-full ${health.hasApiKey ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-                {health.hasApiKey ? 'AI Backend Online' : 'Missing API Key'}
+                {health.hasApiKey ? 'AI API Active' : 'Offline Bank Active'}
               </span>
             )}
           </div>
@@ -74,43 +110,51 @@ function App() {
             <RoleSelection onStartInterview={handleStartInterview} />
           )}
 
-          {step === 'interview' && interviewConfig && (
-            <div className="p-8 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div>
-                  <span className="text-xs text-blue-400 uppercase font-semibold tracking-wider">
-                    {interviewConfig.difficulty} • {interviewConfig.questionCount} Questions
-                  </span>
-                  <h2 className="text-2xl font-bold text-white mt-0.5">
-                    {interviewConfig.role.title} Interview
-                  </h2>
+          {step === 'interview' && (
+            <>
+              {loadingQuestions && (
+                <div className="p-12 bg-slate-900/80 border border-slate-800 rounded-2xl text-center space-y-4 max-w-lg mx-auto shadow-xl">
+                  <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto" />
+                  <h3 className="text-lg font-bold text-white">Generating Questions...</h3>
+                  <p className="text-xs text-slate-400">
+                    Tailoring realistic interview questions for {interviewConfig?.role?.title} ({interviewConfig?.difficulty}).
+                  </p>
                 </div>
-                <button
-                  onClick={handleReset}
-                  className="text-xs text-slate-400 hover:text-white underline"
-                >
-                  Change Setup
-                </button>
-              </div>
+              )}
 
-              <div className="p-6 bg-slate-950 rounded-xl border border-slate-800/80 text-center space-y-3">
-                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-                <h3 className="text-lg font-bold text-white">Role Configured Successfully!</h3>
-                <p className="text-sm text-slate-400 max-w-md mx-auto">
-                  You selected <strong className="text-slate-200">{interviewConfig.role.title}</strong> at <strong className="text-slate-200">{interviewConfig.difficulty}</strong> level with <strong className="text-slate-200">{interviewConfig.questionCount} questions</strong>.
-                </p>
-                <div className="pt-2 text-xs text-indigo-400 font-mono">
-                  [Step 3 will load questions dynamically for this configuration]
+              {!loadingQuestions && errorMsg && (
+                <div className="p-8 bg-slate-900 border border-red-500/30 rounded-2xl text-center space-y-4 max-w-lg mx-auto">
+                  <AlertTriangle className="w-10 h-10 text-red-400 mx-auto" />
+                  <h3 className="text-lg font-bold text-white">Error Loading Questions</h3>
+                  <p className="text-xs text-red-300">{errorMsg}</p>
+                  <button
+                    onClick={handleReset}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold"
+                  >
+                    Back to Setup
+                  </button>
                 </div>
-              </div>
-            </div>
+              )}
+
+              {!loadingQuestions && !errorMsg && questions.length > 0 && (
+                <QuestionCard
+                  questions={questions}
+                  currentIndex={currentIndex}
+                  onNext={() => setCurrentIndex(prev => Math.min(prev + 1, questions.length - 1))}
+                  onPrev={() => setCurrentIndex(prev => Math.max(prev - 1, 0))}
+                  roleTitle={interviewConfig?.role?.title}
+                  difficulty={interviewConfig?.difficulty}
+                  source={questionSource}
+                />
+              )}
+            </>
           )}
         </main>
       </div>
 
       {/* Footer */}
       <footer className="max-w-5xl mx-auto w-full text-center text-xs text-slate-500 pt-8 border-t border-slate-800/40">
-        AI Interview Agent • Step 2: Role & Interview Setup Active
+        AI Interview Agent • Step 3: Role-Based Question Engine Active
       </footer>
     </div>
   );
