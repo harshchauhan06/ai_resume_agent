@@ -147,6 +147,8 @@ ${JSON.stringify(qaPairs, null, 2)}
 Evaluate each answer meticulously and return ONLY a valid JSON object matching this exact schema:
 {
   "overallScore": 8.5,
+  "verdict": "HIRE", // Must be exactly one of: "HIRE", "MAYBE", "REJECT"
+  "verdictReason": "Candidate demonstrated strong domain knowledge and clear problem solving ability.",
   "overallSummary": "Overall candidate demonstrated strong technical depth with minor gaps in edge-case handling.",
   "evaluations": [
     {
@@ -218,11 +220,24 @@ Evaluate each answer meticulously and return ONLY a valid JSON object matching t
 
     const avgScore = Number((evaluations.reduce((acc, curr) => acc + curr.score, 0) / evaluations.length).toFixed(1));
 
+    let verdict = 'MAYBE';
+    let verdictReason = 'Candidate showed promise but requires additional technical validation.';
+
+    if (avgScore >= 7.5) {
+      verdict = 'HIRE';
+      verdictReason = 'Candidate demonstrated strong technical competence and clear architectural understanding.';
+    } else if (avgScore < 5.5) {
+      verdict = 'REJECT';
+      verdictReason = 'Candidate responses fell below the expected technical standard for this role.';
+    }
+
     return res.json({
       source: 'fallback-engine',
       roleTitle,
       difficulty,
       overallScore: avgScore,
+      verdict,
+      verdictReason,
       overallSummary: `Candidate achieved an average score of ${avgScore}/10 across ${evaluations.length} interview questions.`,
       evaluations
     });
