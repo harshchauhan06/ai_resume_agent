@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, ArrowLeft, Loader2, AlertTriangle, Sparkles, BrainCircuit } from 'lucide-react';
+import { Bot, ArrowLeft, Loader2, AlertTriangle, BrainCircuit } from 'lucide-react';
 import RoleSelection from './components/RoleSelection';
 import QuestionCard from './components/QuestionCard';
+import ResultsDashboard from './components/ResultsDashboard';
 
 function App() {
   const [step, setStep] = useState('setup'); // 'setup' | 'interview' | 'results'
@@ -136,7 +137,11 @@ function App() {
               <h1 className="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 AI Interview Agent
               </h1>
-              <p className="text-xs text-slate-400">Step 5: AI Evaluation Engine Active</p>
+              <p className="text-xs text-slate-400">
+                {step === 'setup' && 'Role & Setup'}
+                {step === 'interview' && 'Mock Interview Session'}
+                {step === 'results' && 'Evaluation & Report Card'}
+              </p>
             </div>
           </div>
 
@@ -148,7 +153,7 @@ function App() {
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
               }`}>
                 <span className={`w-2 h-2 rounded-full ${health.hasApiKey ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-                {health.hasApiKey ? 'AI API Active' : 'Offline Bank Active'}
+                {health.hasApiKey ? 'AI API Online' : 'Offline Bank Active'}
               </span>
             )}
           </div>
@@ -219,34 +224,17 @@ function App() {
           )}
 
           {!evaluating && step === 'results' && evaluationData && (
-            <div className="p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div>
-                  <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider">
-                    Evaluation Complete
-                  </span>
-                  <h2 className="text-2xl font-bold text-white">
-                    Overall Score: {evaluationData.overallScore} / 10
-                  </h2>
-                </div>
-                <button
-                  onClick={handleReset}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold"
-                >
-                  Start New Interview
-                </button>
-              </div>
-              <p className="text-sm text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800">
-                {evaluationData.overallSummary}
-              </p>
-            </div>
+            <ResultsDashboard
+              evaluationData={evaluationData}
+              onRestart={handleReset}
+            />
           )}
         </main>
       </div>
 
       {/* Footer */}
       <footer className="max-w-5xl mx-auto w-full text-center text-xs text-slate-500 pt-8 border-t border-slate-800/40">
-        AI Interview Agent • Step 5: AI Evaluation Endpoint Active
+        AI Interview Agent • Full MVP Engine Active
       </footer>
     </div>
   );
