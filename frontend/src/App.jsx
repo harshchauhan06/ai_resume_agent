@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, ArrowLeft, Loader2, AlertTriangle, BrainCircuit } from 'lucide-react';
+import { Bot, ArrowLeft, Loader2, AlertTriangle, BrainCircuit, Sparkles } from 'lucide-react';
 import RoleSelection from './components/RoleSelection';
 import QuestionCard from './components/QuestionCard';
 import ResultsDashboard from './components/ResultsDashboard';
@@ -112,69 +112,70 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 md:p-10 relative overflow-hidden">
-      {/* Background radial glow */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute top-1/2 -right-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 sm:p-6 md:p-10 relative overflow-hidden font-sans">
+      {/* Background ambient lighting */}
+      <div className="absolute top-10 left-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div className="max-w-5xl mx-auto w-full space-y-8 z-10">
+      {/* Main Centered App Wrapper Container */}
+      <div className="w-full max-w-5xl bg-slate-900/80 border border-slate-800/80 rounded-3xl p-6 sm:p-8 md:p-10 shadow-2xl backdrop-blur-xl space-y-8 z-10 my-auto">
         {/* Navigation / Header */}
-        <header className="flex items-center justify-between border-b border-slate-800/80 pb-5">
-          <div className="flex items-center space-x-3">
+        <header className="flex items-center justify-between border-b border-slate-800 pb-5">
+          <div className="flex items-center space-x-3.5">
             {step !== 'setup' && (
               <button
                 onClick={handleReset}
-                className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition border border-slate-800 mr-1"
+                className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white transition border border-slate-800"
                 title="Back to Setup"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-4.5 h-4.5" />
               </button>
             )}
-            <div className="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/20">
+            <div className="p-3 bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 rounded-2xl shadow-lg shadow-blue-500/20 border border-blue-400/20">
               <Bot className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+              <h1 className="text-xl md:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 AI Interview Agent
               </h1>
-              <p className="text-xs text-slate-400">
-                {step === 'setup' && 'Role & Setup'}
-                {step === 'interview' && 'Mock Interview Session'}
-                {step === 'results' && 'Evaluation & Report Card'}
+              <p className="text-xs font-semibold text-slate-400 mt-0.5">
+                {step === 'setup' && 'Role & Interview Setup'}
+                {step === 'interview' && 'Mock Technical Interview'}
+                {step === 'results' && 'AI Assessment & Final Verdict'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 text-xs font-semibold">
+          <div className="flex items-center space-x-3 text-xs font-bold">
             {health && (
-              <span className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full border ${
+              <span className={`hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full border ${
                 health.hasApiKey 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' 
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
               }`}>
-                <span className={`w-2 h-2 rounded-full ${health.hasApiKey ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-                {health.hasApiKey ? 'AI API Online' : 'Offline Bank Active'}
+                <span className={`w-2 h-2 rounded-full ${health.hasApiKey ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                {health.hasApiKey ? 'AI Backend Ready' : 'Offline Bank Mode'}
               </span>
             )}
           </div>
         </header>
 
-        {/* View Switcher */}
-        <main className="py-2">
+        {/* Dynamic Step View Switcher */}
+        <main>
           {step === 'setup' && (
             <RoleSelection onStartInterview={handleStartInterview} />
           )}
 
           {evaluating && (
-            <div className="p-12 bg-slate-900/90 border border-indigo-500/30 rounded-2xl text-center space-y-5 max-w-lg mx-auto shadow-2xl backdrop-blur-md animate-pulse">
+            <div className="p-12 bg-slate-950/80 border border-indigo-500/30 rounded-3xl text-center space-y-5 max-w-lg mx-auto shadow-2xl backdrop-blur-md animate-pulse my-6">
               <BrainCircuit className="w-12 h-12 text-indigo-400 animate-bounce mx-auto" />
               <div>
                 <h3 className="text-xl font-extrabold text-white">AI Evaluator at Work</h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Analyzing technical accuracy, key concepts, depth, and scoring your responses out of 10...
+                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                  Analyzing technical accuracy, depth, and scoring your responses out of 10...
                 </p>
               </div>
-              <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+              <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
                 <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-1.5 rounded-full animate-pulse w-full"></div>
               </div>
             </div>
@@ -183,9 +184,9 @@ function App() {
           {!evaluating && step === 'interview' && (
             <>
               {loadingQuestions && (
-                <div className="p-12 bg-slate-900/80 border border-slate-800 rounded-2xl text-center space-y-4 max-w-lg mx-auto shadow-xl">
+                <div className="p-12 bg-slate-950/80 border border-slate-800 rounded-3xl text-center space-y-4 max-w-lg mx-auto shadow-xl my-6">
                   <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto" />
-                  <h3 className="text-lg font-bold text-white">Generating Questions...</h3>
+                  <h3 className="text-lg font-extrabold text-white">Generating Questions...</h3>
                   <p className="text-xs text-slate-400">
                     Tailoring realistic interview questions for {interviewConfig?.role?.title} ({interviewConfig?.difficulty}).
                   </p>
@@ -193,13 +194,13 @@ function App() {
               )}
 
               {!loadingQuestions && errorMsg && (
-                <div className="p-8 bg-slate-900 border border-red-500/30 rounded-2xl text-center space-y-4 max-w-lg mx-auto">
+                <div className="p-8 bg-slate-950 border border-red-500/30 rounded-3xl text-center space-y-4 max-w-lg mx-auto my-6">
                   <AlertTriangle className="w-10 h-10 text-red-400 mx-auto" />
                   <h3 className="text-lg font-bold text-white">Error</h3>
                   <p className="text-xs text-red-300">{errorMsg}</p>
                   <button
                     onClick={handleReset}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold"
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold"
                   >
                     Back to Setup
                   </button>
@@ -230,12 +231,12 @@ function App() {
             />
           )}
         </main>
-      </div>
 
-      {/* Footer */}
-      <footer className="max-w-5xl mx-auto w-full text-center text-xs text-slate-500 pt-8 border-t border-slate-800/40">
-        AI Interview Agent • Full MVP Engine Active
-      </footer>
+        {/* App Footer */}
+        <footer className="text-center text-xs text-slate-500 pt-6 border-t border-slate-800/80">
+          AI Interview Agent • React (Vite) + Tailwind CSS v3 + Express + Gemini AI
+        </footer>
+      </div>
     </div>
   );
 }

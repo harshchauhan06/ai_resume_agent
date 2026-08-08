@@ -1,7 +1,20 @@
-@tailwindcss base;
-@tailwindcss components;
-@tailwindcss utilities;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-body {
-  font-family: 'Inter', sans-serif;
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col justify-between;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+}
+
+/* Custom animation utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
 }
