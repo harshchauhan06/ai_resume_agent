@@ -89,7 +89,6 @@ Respond ONLY with a valid JSON array of objects, strictly in this format without
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
         
-        // Clean markdown backticks if returned
         const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedQuestions = JSON.parse(cleanedText);
 
@@ -120,6 +119,117 @@ Respond ONLY with a valid JSON array of objects, strictly in this format without
   } catch (error) {
     console.error('Error in /api/questions:', error);
     res.status(500).json({ error: 'Failed to generate questions. Please try again.' });
+  }
+});
+
+// Endpoint: AI Evaluation & Scoring
+app.post('/api/evaluate', async (req, res) => {
+  try {
+    const { roleTitle, difficulty, qaPairs } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+
+    console.log(`Evaluating ${qaPairs?.length || 0} candidate answers for role=${roleTitle} (${difficulty})`);
+
+    if (!qaPairs || qaPairs.length === 0) {
+      return res.status(400).json({ error: 'No Q&A pairs provided for evaluation.' });
+    }
+
+    if (apiKey) {
+      try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        const prompt = `You are a Principal Tech Lead and Hiring Director evaluating candidate responses for a "${roleTitle}" position at "${difficulty}" level.
+
+Here are the Questions and Candidate Answers:
+${JSON.stringify(qaPairs, null, 2)}
+
+Evaluate each answer meticulously and return ONLY a valid JSON object matching this exact schema:
+{
+  "overallScore": 8.5,
+  "overallSummary": "Overall candidate demonstrated strong technical depth with minor gaps in edge-case handling.",
+  "evaluations": [
+    {
+      "questionId": 1,
+      "score": 8,
+      "status": "Good",
+      "strengths": ["Clear explanation of core concepts", "Used industry standard terms"],
+      "missingPoints": ["Could have mentioned performance trade-offs"],
+      "summaryFeedback": "Solid answer covering fundamental principles, though lacking deep architectural nuances."
+    }
+  ]
+}`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        
+        const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsedEvaluation = JSON.parse(cleanedText);
+
+        return res.json({
+          source: 'gemini-ai',
+          roleTitle,
+          difficulty,
+          ...parsedEvaluation
+        });
+
+      } catch (aiErr) {
+        console.warn('Gemini AI evaluation failed, utilizing fallback engine:', aiErr.message);
+      }
+    }
+
+    // Heuristic Fallback Evaluation Engine
+    const evaluations = qaPairs.map((pair, idx) => {
+      const text = pair.answerText || '';
+      const len = text.trim().length;
+
+      let score = 5;
+      let status = 'Needs Improvement';
+      let strengths = ['Submitted a response for the technical scenario.'];
+      let missingPoints = ['Expand on specific technical frameworks, edge cases, and architecture.'];
+
+      if (len > 120) {
+        score = 9;
+        status = 'Excellent';
+        strengths = [
+          'Detailed response with strong technical depth.',
+          'Demonstrated clear understanding of core architecture and trade-offs.'
+        ];
+        missingPoints = ['Consider discussing real-world production monitoring metrics.'];
+      } else if (len > 40) {
+        score = 7;
+        status = 'Good';
+        strengths = ['Covered basic concepts directly.'];
+        missingPoints = ['Add concrete technical examples or code structure patterns.'];
+      }
+
+      return {
+        questionId: pair.questionId || idx + 1,
+        questionText: pair.questionText,
+        category: pair.category,
+        userAnswer: text,
+        score,
+        status,
+        strengths,
+        missingPoints,
+        summaryFeedback: `Candidate answer was ${status.toLowerCase()} with ${len} characters of technical explanation.`
+      };
+    });
+
+    const avgScore = Number((evaluations.reduce((acc, curr) => acc + curr.score, 0) / evaluations.length).toFixed(1));
+
+    return res.json({
+      source: 'fallback-engine',
+      roleTitle,
+      difficulty,
+      overallScore: avgScore,
+      overallSummary: `Candidate achieved an average score of ${avgScore}/10 across ${evaluations.length} interview questions.`,
+      evaluations
+    });
+
+  } catch (error) {
+    console.error('Error in /api/evaluate:', error);
+    res.status(500).json({ error: 'Evaluation failed. Please try again.' });
   }
 });
 

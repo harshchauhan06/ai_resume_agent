@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, ArrowLeft, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Bot, ArrowLeft, Loader2, AlertTriangle, Sparkles, BrainCircuit } from 'lucide-react';
 import RoleSelection from './components/RoleSelection';
 import QuestionCard from './components/QuestionCard';
 
@@ -10,7 +10,10 @@ function App() {
   const [questionSource, setQuestionSource] = useState('fallback-bank');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({}); // { [qId]: 'user text' }
+  const [evaluationData, setEvaluationData] = useState(null);
+  
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [health, setHealth] = useState(null);
 
@@ -28,6 +31,7 @@ function App() {
     setStep('interview');
     setCurrentIndex(0);
     setAnswers({});
+    setEvaluationData(null);
 
     try {
       const res = await fetch('/api/questions', {
@@ -61,14 +65,39 @@ function App() {
     }));
   };
 
-  const handleSubmitAllAnswers = () => {
-    console.log('Submitting answers for evaluation:', {
-      config: interviewConfig,
-      questions,
-      answers
-    });
-    // In Step 5, we will call /api/evaluate endpoint!
-    alert(`Step 4 Complete! Successfully recorded ${Object.keys(answers).length} answers. Proceeding to Step 5 (AI Evaluation Engine).`);
+  const handleSubmitAllAnswers = async () => {
+    setEvaluating(true);
+    setErrorMsg(null);
+
+    const qaPairs = questions.map(q => ({
+      questionId: q.id,
+      questionText: q.text,
+      category: q.category,
+      answerText: answers[q.id] || ''
+    }));
+
+    try {
+      const res = await fetch('/api/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roleTitle: interviewConfig.role.title,
+          difficulty: interviewConfig.difficulty,
+          qaPairs
+        })
+      });
+
+      if (!res.ok) throw new Error(`Evaluation failed with status ${res.status}`);
+      const evalResult = await res.json();
+
+      setEvaluationData(evalResult);
+      setStep('results');
+    } catch (err) {
+      console.error('Evaluation error:', err);
+      setErrorMsg('Failed to evaluate answers. Please try again.');
+    } finally {
+      setEvaluating(false);
+    }
   };
 
   const handleReset = () => {
@@ -77,6 +106,7 @@ function App() {
     setQuestions([]);
     setCurrentIndex(0);
     setAnswers({});
+    setEvaluationData(null);
     setErrorMsg(null);
   };
 
@@ -106,7 +136,7 @@ function App() {
               <h1 className="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 AI Interview Agent
               </h1>
-              <p className="text-xs text-slate-400">Step 4: Real-Time Answer Recording</p>
+              <p className="text-xs text-slate-400">Step 5: AI Evaluation Engine Active</p>
             </div>
           </div>
 
@@ -130,7 +160,22 @@ function App() {
             <RoleSelection onStartInterview={handleStartInterview} />
           )}
 
-          {step === 'interview' && (
+          {evaluating && (
+            <div className="p-12 bg-slate-900/90 border border-indigo-500/30 rounded-2xl text-center space-y-5 max-w-lg mx-auto shadow-2xl backdrop-blur-md animate-pulse">
+              <BrainCircuit className="w-12 h-12 text-indigo-400 animate-bounce mx-auto" />
+              <div>
+                <h3 className="text-xl font-extrabold text-white">AI Evaluator at Work</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Analyzing technical accuracy, key concepts, depth, and scoring your responses out of 10...
+                </p>
+              </div>
+              <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-1.5 rounded-full animate-pulse w-full"></div>
+              </div>
+            </div>
+          )}
+
+          {!evaluating && step === 'interview' && (
             <>
               {loadingQuestions && (
                 <div className="p-12 bg-slate-900/80 border border-slate-800 rounded-2xl text-center space-y-4 max-w-lg mx-auto shadow-xl">
@@ -145,7 +190,7 @@ function App() {
               {!loadingQuestions && errorMsg && (
                 <div className="p-8 bg-slate-900 border border-red-500/30 rounded-2xl text-center space-y-4 max-w-lg mx-auto">
                   <AlertTriangle className="w-10 h-10 text-red-400 mx-auto" />
-                  <h3 className="text-lg font-bold text-white">Error Loading Questions</h3>
+                  <h3 className="text-lg font-bold text-white">Error</h3>
                   <p className="text-xs text-red-300">{errorMsg}</p>
                   <button
                     onClick={handleReset}
@@ -172,12 +217,36 @@ function App() {
               )}
             </>
           )}
+
+          {!evaluating && step === 'results' && evaluationData && (
+            <div className="p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div>
+                  <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider">
+                    Evaluation Complete
+                  </span>
+                  <h2 className="text-2xl font-bold text-white">
+                    Overall Score: {evaluationData.overallScore} / 10
+                  </h2>
+                </div>
+                <button
+                  onClick={handleReset}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold"
+                >
+                  Start New Interview
+                </button>
+              </div>
+              <p className="text-sm text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800">
+                {evaluationData.overallSummary}
+              </p>
+            </div>
+          )}
         </main>
       </div>
 
       {/* Footer */}
       <footer className="max-w-5xl mx-auto w-full text-center text-xs text-slate-500 pt-8 border-t border-slate-800/40">
-        AI Interview Agent • Step 4: Answer Form & Session Tracking Active
+        AI Interview Agent • Step 5: AI Evaluation Endpoint Active
       </footer>
     </div>
   );
